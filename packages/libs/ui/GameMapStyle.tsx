@@ -1,7 +1,9 @@
 import type { DataDrivenPropertyValueSpecification } from '@maplibre/maplibre-gl-style-spec';
 import { Preconditions } from '@truckermudgeon/base/precon';
 import type {
+  AtsDlcGuard,
   AtsSelectableDlc,
+  Ets2DlcGuard,
   Ets2SelectableDlc,
 } from '@truckermudgeon/map/constants';
 import {
@@ -9,11 +11,13 @@ import {
   Ets2SelectableDlcs,
   MapAreaColor,
   toAtsDlcGuards,
+  toEts2DlcGuards,
 } from '@truckermudgeon/map/constants';
 import type {
   FacilityIcon,
   NonFacilityPoi,
   RoadType,
+  TrafficProperties,
 } from '@truckermudgeon/map/types';
 import type {
   ExpressionSpecification,
@@ -46,12 +50,16 @@ export const enum MapIcon {
   CityNames,
   Company,
   RoadNumber,
+  Roadwork,
+  RailCrossing,
 }
 export const allIcons: ReadonlySet<MapIcon> = new Set<MapIcon>(
-  Array.from({ length: 17 }, (_, i) => i as MapIcon),
+  Array.from({ length: 19 }, (_, i) => i as MapIcon),
 );
 
 export type GameMapStyleProps = {
+  /** URL where .pmtiles are fetched */
+  tileRootUrl: string;
   /** Defaults to all MapIcons */
   visibleIcons?: ReadonlySet<MapIcon>;
   /** Defaults to true */
@@ -74,6 +82,7 @@ export type GameMapStyleProps = {
 export const GameMapStyle = (props: GameMapStyleProps) => {
   const {
     game,
+    tileRootUrl,
     visibleIcons = allIcons,
     enableIconAutoHide = true,
     mode = 'light',
@@ -87,7 +96,11 @@ export const GameMapStyle = (props: GameMapStyleProps) => {
   return (
     // N.B.: {ats,ets2}.pmtiles each have one layer named 'ats' or 'ets2'
     // (layer names are set when running tippecanoe).
-    <Source id={game} type={'vector'} url={`pmtiles:///${game}.pmtiles`}>
+    <Source
+      id={game}
+      type={'vector'}
+      url={`pmtiles://${tileRootUrl}/${game}.pmtiles`}
+    >
       <Layer
         id={game + 'mapAreas'}
         source-layer={game}
@@ -128,7 +141,12 @@ export const GameMapStyle = (props: GameMapStyleProps) => {
           'fill-color': mapAreaColor(mode),
         }}
       />
-      <FootprintsSource game={game} mode={mode} color={colors.footprint} />
+      <FootprintsSource
+        tileRootUrl={tileRootUrl}
+        game={game}
+        mode={mode}
+        color={colors.footprint}
+      />
       <Layer
         id={game + 'hidden-roads'}
         source-layer={game}
@@ -590,7 +608,8 @@ export const GameMapStyle = (props: GameMapStyleProps) => {
       )}
       {hasPois(visibleIcons) &&
         (visibleIcons.has(MapIcon.Viewpoint) ||
-          visibleIcons.has(MapIcon.PhotoSight)) && (
+          visibleIcons.has(MapIcon.PhotoSight) ||
+          visibleIcons.has(MapIcon.TruckDealer)) && (
           <Layer
             id={game + 'poi-icon-labels'}
             source-layer={game}
@@ -601,9 +620,17 @@ export const GameMapStyle = (props: GameMapStyleProps) => {
               ['==', ['geometry-type'], 'Point'],
               ['==', ['get', 'type'], 'poi'],
               [
-                'in',
-                ['get', 'poiType'],
-                ['literal', ['viewpoint', 'landmark']],
+                'any',
+                [
+                  'in',
+                  ['get', 'poiType'],
+                  ['literal', ['viewpoint', 'landmark']],
+                ],
+                [
+                  'all',
+                  ['==', ['get', 'poiType'], 'facility'],
+                  ['==', ['get', 'sprite'], 'dealer_ico'],
+                ],
               ],
               createPoiFilter(visibleIcons),
               dlcGuardFilter,
@@ -623,23 +650,51 @@ export const GameMapStyle = (props: GameMapStyleProps) => {
             paint={colors.primaryTextPaint}
           />
         )}
+      {(visibleIcons.has(MapIcon.Roadwork) ||
+        visibleIcons.has(MapIcon.RailCrossing)) && (
+        <Layer
+          id={game + 'traffic-icons'}
+          source-layer={game}
+          type={'symbol'}
+          minzoom={enableIconAutoHide ? 6 : 0}
+          filter={[
+            'all',
+            ['==', ['geometry-type'], 'Point'],
+            ['==', ['get', 'type'], 'traffic'],
+            createTrafficFilter(visibleIcons),
+            dlcGuardFilter,
+          ]}
+          layout={iconLayout(
+            enableIconAutoHide,
+            0.6 * 0.5,
+            1.25 * 0.5,
+            2.5 * 0.5,
+            {
+              vertical: 2,
+              horizontal: 2,
+            },
+          )}
+        />
+      )}
     </Source>
   );
 };
 
 const FootprintsSource = ({
   game,
+  tileRootUrl,
   color,
   mode,
 }: {
   game: 'ats' | 'ets2';
+  tileRootUrl: string;
   color: string;
   mode: Mode;
 }) => (
   <Source
     id={game + 'footprints'}
     type={'vector'}
-    url={`pmtiles:///${game}-footprints.pmtiles`}
+    url={`pmtiles://${tileRootUrl}/${game}-footprints.pmtiles`}
   >
     <Layer
       id={game + 'footprints'}
@@ -721,7 +776,7 @@ const cityIconImage: ExpressionSpecification = [
   '',
 ];
 
-const mapIcons = [
+const poiMapIcons = [
   MapIcon.PhotoSight,
   MapIcon.Viewpoint,
   MapIcon.Port,
@@ -738,6 +793,8 @@ const mapIcons = [
   MapIcon.BorderCheck,
 ];
 
+export const trafficMapIcons = [MapIcon.Roadwork, MapIcon.RailCrossing];
+
 type RoadFacilityIcon = 'weigh_ico' | 'toll_ico' | 'agri_check' | 'border_ico';
 const allRoadFacilityIcons: readonly RoadFacilityIcon[] = [
   'weigh_ico',
@@ -747,7 +804,31 @@ const allRoadFacilityIcons: readonly RoadFacilityIcon[] = [
 ];
 
 function hasPois(icons: ReadonlySet<MapIcon>): boolean {
-  return mapIcons.some(icon => icons.has(icon));
+  return poiMapIcons.some(icon => icons.has(icon));
+}
+
+function hasTraffics(icons: ReadonlySet<MapIcon>): boolean {
+  return trafficMapIcons.some(icon => icons.has(icon));
+}
+
+function createTrafficFilter(
+  visibleIcons: ReadonlySet<MapIcon>,
+): ExpressionSpecification {
+  Preconditions.checkArgument(hasTraffics(visibleIcons));
+
+  const trafficSprites: TrafficProperties['sprite'][] = [];
+  if (visibleIcons.has(MapIcon.Roadwork)) {
+    trafficSprites.push('roadwork');
+  }
+  if (visibleIcons.has(MapIcon.RailCrossing)) {
+    trafficSprites.push('rail_crossing');
+  }
+  const trafficPredicate: ExpressionSpecification | false =
+    trafficSprites.length > 0
+      ? ['in', ['get', 'sprite'], ['literal', trafficSprites]]
+      : false;
+
+  return ['any', trafficPredicate];
 }
 
 function createPoiFilter(
@@ -845,15 +926,15 @@ function createDlcGuardFilter(
 ): ExpressionSpecification;
 function createDlcGuardFilter(
   game: 'ats' | 'ets2',
-  selectedDlcs: ReadonlySet<unknown>,
+  selectedDlcs: ReadonlySet<AtsSelectableDlc> | ReadonlySet<Ets2SelectableDlc>,
 ): ExpressionSpecification {
-  if (game !== 'ats') {
-    return ['boolean', true];
+  let dlcGuards: Set<AtsDlcGuard> | Set<Ets2DlcGuard>;
+  if (game === 'ats') {
+    dlcGuards = toAtsDlcGuards(selectedDlcs as ReadonlySet<AtsSelectableDlc>);
+  } else {
+    dlcGuards = toEts2DlcGuards(selectedDlcs as ReadonlySet<Ets2SelectableDlc>);
   }
 
-  const dlcGuards = toAtsDlcGuards(
-    selectedDlcs as ReadonlySet<AtsSelectableDlc>,
-  );
   return ['in', ['get', 'dlcGuard'], ['literal', [...dlcGuards]]];
 }
 

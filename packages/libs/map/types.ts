@@ -144,6 +144,13 @@ export type LabeledPoi = BasePoi &
         dlcGuard: number;
         nodeUid: bigint;
       }
+    | {
+        type: 'facility';
+        icon: 'dealer_ico';
+        prefabUid: bigint;
+        prefabPath: string;
+        label: string;
+      }
   >;
 
 export type FacilityIcon =
@@ -165,7 +172,7 @@ type UnlabeledPoi = BasePoi &
       }
     | {
         type: 'facility';
-        icon: Exclude<FacilityIcon, 'parking_ico'>;
+        icon: Exclude<FacilityIcon, 'parking_ico' | 'dealer_ico'>;
         prefabUid: bigint;
         prefabPath: string;
       }
@@ -544,6 +551,8 @@ export interface ModelDescription {
 
 export type WithToken<T> = T & { token: string };
 
+export type WithPath<T> = T & { path: string };
+
 export interface MapData extends DefData {
   nodes: Node[];
   elevation: [number, number, number][];
@@ -565,7 +574,7 @@ export interface DefData {
   countries: Country[];
   companyDefs: Company[];
   roadLooks: WithToken<RoadLook>[];
-  prefabDescriptions: WithToken<PrefabDescription>[];
+  prefabDescriptions: WithToken<WithPath<PrefabDescription>>[];
   modelDescriptions: WithToken<ModelDescription>[];
   achievements: WithToken<Achievement>[];
   routes: WithToken<Route>[];
@@ -611,6 +620,8 @@ export type CountryFeature = GeoJSON.Feature<GeoJSON.Point, CountryProperties>;
 
 export type PoiFeature = GeoJSON.Feature<GeoJSON.Point, PoiProperties>;
 
+export type TrafficFeature = GeoJSON.Feature<GeoJSON.Point, TrafficProperties>;
+
 export type FootprintFeature = GeoJSON.Feature<
   GeoJSON.Polygon,
   FootprintProperties
@@ -634,6 +645,7 @@ export type AtsMapGeoJsonFeature =
   | CityFeature
   | CountryFeature
   | PoiFeature
+  | TrafficFeature
   | FootprintFeature
   | ContourFeature
   | AchievementFeature
@@ -709,6 +721,12 @@ export interface PoiProperties {
   poiType: string; // Overlay, Viewpoint, Company, etc.
   poiName?: string; // POI label, if available
   dlcGuard?: number; // For dlc-guarded POIs, like road icons
+}
+
+export interface TrafficProperties {
+  type: 'traffic';
+  sprite: string;
+  dlcGuard: number;
 }
 
 export type ScopedCityFeature = GeoJSON.Feature<

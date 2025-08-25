@@ -3,12 +3,16 @@ import { addPmTilesProtocol } from './pmtiles';
 
 interface ContoursStyleProps {
   game: 'ats' | 'ets2';
+  tileRootUrl: string;
   showContours: boolean;
 }
 export const ContoursStyle = (props: ContoursStyleProps) => {
   addPmTilesProtocol();
   return (
-    <Source type={'vector'} url={`pmtiles:///${props.game}-contours.pmtiles`}>
+    <Source
+      type={'vector'}
+      url={`pmtiles://${props.tileRootUrl}/${props.game}-contours.pmtiles`}
+    >
       <Layer
         source-layer={'contours'}
         type={'fill'}

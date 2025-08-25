@@ -28,6 +28,7 @@ import type {
   Route,
   TrajectoryItem,
   Trigger,
+  WithPath,
   WithToken,
 } from '@truckermudgeon/map/types';
 import fs from 'fs';
@@ -204,9 +205,9 @@ export function readMapData<T extends 'usa' | 'europe'>(
   const roadLooks = readArrayFile<WithToken<RoadLook>>(
     toJsonFilePath('roadLooks.json'),
   );
-  const prefabDescriptions = readArrayFile<WithToken<PrefabDescription>>(
-    toJsonFilePath('prefabDescriptions.json'),
-  );
+  const prefabDescriptions = readArrayFile<
+    WithToken<WithPath<PrefabDescription>>
+  >(toJsonFilePath('prefabDescriptions.json'));
   const modelDescriptions = readArrayFile<WithToken<ModelDescription>>(
     toJsonFilePath('modelDescriptions.json'),
   );
@@ -294,9 +295,9 @@ function checkJsonFilesPresent(inputDir: string, map: 'usa' | 'europe') {
     logger.error(
       'missing JSON files in directory',
       inputDir,
-      '\n  ',
-      missingJsonFiles.map(f => `${f}.json`).join(', '),
-      '\nre-export JSON files using parser and try again.',
+      '\n\n  ',
+      missingJsonFiles.map(f => `${map}-${f}.json`).join(', '),
+      '\n\nre-export JSON files using parser and try again.',
     );
     process.exit(1);
   }

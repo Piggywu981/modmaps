@@ -27,6 +27,10 @@
     "prepare": "husky install",
     "lint": "npx tsc -b && npx prettier --check --ignore-unknown packages && npx eslint packages/*/*"
   },
+  "engines": {
+    "node": ">=22.9.0",
+    "npm": ">=10.9.0"
+  },
   "lint-staged": {
     "**/*.ts": [
       "eslint --fix",

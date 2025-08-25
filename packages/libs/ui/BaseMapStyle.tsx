@@ -5,12 +5,13 @@ import { modeColors } from './colors';
 import { addPmTilesProtocol } from './pmtiles';
 
 interface BaseMapStyleProps extends PropsWithChildren {
+  tileRootUrl: string;
   mode?: Mode;
 }
 
 export const BaseMapStyle = (props: BaseMapStyleProps) => {
   addPmTilesProtocol();
-  const { mode = 'light', children } = props;
+  const { mode = 'light', children, tileRootUrl } = props;
   const colors = modeColors[mode];
 
   return (
@@ -20,7 +21,11 @@ export const BaseMapStyle = (props: BaseMapStyleProps) => {
         type={'background'}
         paint={{ 'background-color': colors.land }}
       />
-      <Source id={'world'} type={'vector'} url={'pmtiles:///world.pmtiles'}>
+      <Source
+        id={'world'}
+        type={'vector'}
+        url={`pmtiles://${tileRootUrl}/world.pmtiles`}
+      >
         <Layer
           source-layer={'water'}
           type={'fill'}

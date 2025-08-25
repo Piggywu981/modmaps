@@ -25,6 +25,8 @@ export async function createSpritesheet(
   const resourcesPaths = [
     path.join(resourcesDir, 'dot.png'),
     path.join(resourcesDir, 'dotdot.png'),
+    path.join(resourcesDir, 'roadwork.png'),
+    path.join(resourcesDir, 'railcrossing.png'),
   ];
   const poiPngPaths = [...new Set(pois.map(o => o.icon))].map(name =>
     path.join(inputDir, 'icons', name + '.png'),
