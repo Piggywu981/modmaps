@@ -1123,10 +1123,23 @@ export function postProcess(
 }
 
 function toDealerLabel(prefabPath: string): string {
-  Preconditions.checkArgument(prefabPath.includes('/truck_dealer/'));
-  const dealerRegex = /\/truck_dealer\/(?:truck_dealer_([^.]+).ppd$|([^/]+)\/)/;
-  const matches = assertExists(dealerRegex.exec(prefabPath));
-  const dealer = assertExists(matches[1] ?? matches[2]);
+  if (!prefabPath.includes('/truck_dealer/')) {
+    logger.warn('Unexpected prefab path for truck dealer:', prefabPath);
+    return 'Unknown Dealer';
+  }
+  
+  const dealerRegex = /\/truck_dealer\/(?:truck_dealer_([^.]+).ppd$|([^\/]+)\/)/;
+  const matches = dealerRegex.exec(prefabPath);
+  if (!matches) {
+    logger.warn('Could not extract dealer from path:', prefabPath);
+    return 'Unknown Dealer';
+  }
+  
+  const dealer = matches[1] ?? matches[2];
+  if (!dealer) {
+    logger.warn('Empty dealer code from path:', prefabPath);
+    return 'Unknown Dealer';
+  }
 
   switch (dealer) {
     case 'mb':
@@ -1147,7 +1160,8 @@ function toDealerLabel(prefabPath: string): string {
     case 'volvo':
       return dealer.charAt(0).toUpperCase() + dealer.slice(1);
     default:
-      throw new Error('unknown dealer: ' + dealer);
+      logger.warn('unknown dealer code:', dealer, 'in path:', prefabPath);
+      return dealer;
   }
 }
 
