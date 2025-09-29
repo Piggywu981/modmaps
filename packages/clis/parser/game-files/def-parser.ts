@@ -268,7 +268,7 @@ export function parseDefFiles(
   const defWorld = entries.directories.get('def/world');
   if (defWorld) {
     for (const f of defWorld.files) {
-      if (!/^(prefab|road_look|sign|model)\./.test(f) || !f.endsWith('.sii')) {
+      if (!/^(prefab|road_look|model|sign)\./.test(f) || !f.endsWith('.sii')) {
         continue;
       }
 

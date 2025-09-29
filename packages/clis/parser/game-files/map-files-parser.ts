@@ -515,7 +515,7 @@ export function postProcess(
       case ItemType.Prefab:
         checkReference(item.token, defData.prefabs, 'prefab token', item);
         checkReference(item.nodeUids, nodesByUid, 'nodeUids', item);
-        referencedSignTokens.add(item.token);
+        referencedPrefabTokens.add(item.token);
         item.nodeUids.forEach(uid => {
           referencedNodeUids.add(uid);
           elevationNodeUids.add(uid);
