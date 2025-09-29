@@ -13,6 +13,7 @@ import type {
   PrefabDescription,
   RoadLook,
   Route,
+  SignDescription,
   SpeedLimits,
   WithPath,
 } from '@truckermudgeon/map/types';
@@ -35,6 +36,7 @@ import type {
   PrefabSii,
   RoadLookSii,
   RouteSii,
+  SignSii,
   SpeedLimitsSii,
 } from './sii-schemas';
 import {
@@ -51,6 +53,7 @@ import {
   PrefabSiiSchema,
   RoadLookSiiSchema,
   RouteSiiSchema,
+  SignSiiSchema,
   SpeedLimitSiiSchema,
   ViewpointsSiiSchema,
 } from './sii-schemas';
@@ -82,6 +85,7 @@ export function parseDefFiles(
   >();
   const prefabs = new Map<string, WithPath<PrefabDescription>>();
   const roadLooks = new Map<string, RoadLook>();
+  const signs = new Map<string, SignDescription>();
   const models = new Map<string, ModelDescription>();
   const vegetation = new Set<string>();
   const viewpoints = new Map<bigint, string>();
@@ -112,6 +116,7 @@ export function parseDefFiles(
       cities,
       prefabs,
       models,
+      signs,
       viewpoints,
       mileageTargets,
       countries,
@@ -263,7 +268,7 @@ export function parseDefFiles(
   const defWorld = entries.directories.get('def/world');
   if (defWorld) {
     for (const f of defWorld.files) {
-      if (!/^(prefab|road_look|model)\./.test(f) || !f.endsWith('.sii')) {
+      if (!/^(prefab|road_look|sign|model)\./.test(f) || !f.endsWith('.sii')) {
         continue;
       }
 
@@ -286,6 +291,9 @@ export function parseDefFiles(
         );
         buildings.forEach((v, k) => models.set(k, v));
         _vegetation.forEach(v => vegetation.add(v));
+      } else if (f.startsWith('sign')) {
+        const json = convertSiiToJson(`def/world/${f}`, entries, SignSiiSchema);
+        processSignJson(json).forEach((v, k) => signs.set(k, v));
       } else if (f.startsWith('road_look')) {
         const json = convertSiiToJson(
           `def/world/${f}`,
@@ -299,6 +307,7 @@ export function parseDefFiles(
     }
     logger.info('parsed', prefabs.size, 'prefab defs');
     logger.info('parsed', roadLooks.size, 'road looks');
+    logger.info('parsed', signs.size, 'editable sign defs');
     logger.info('parsed', models.size, 'building models');
     logger.info('parsed', vegetation.size, 'vegetation models');
   }
@@ -418,6 +427,7 @@ export function parseDefFiles(
     prefabs,
     roadLooks,
     models,
+    signs,
     vegetation,
     mileageTargets,
     viewpoints,
@@ -681,6 +691,33 @@ function processPrefabJson(
     }
   }
   return prefabs;
+}
+
+function processSignJson(obj: SignSii): Map<string, SignDescription> {
+  const signModel = obj.signModel;
+  if (!signModel) {
+    return new Map();
+  }
+
+  return new Map<string, SignDescription>(
+    Object.entries(signModel).flatMap(([key, o]) => {
+      return [
+        [
+          key.split('.')[1],
+          {
+            name: o.modelDesc
+              .split('/')
+              .at(-1)!
+              .slice(0, -4)
+              .replaceAll('_',' '),
+            modelDesc: o.modelDesc,
+            category: o.category ?? '',
+            editable: o.editable === 'true'
+          },
+        ],
+      ];
+    }),
+  );
 }
 
 function processModelJson(

@@ -391,6 +391,14 @@ export type Cutscene = BaseItem &
     actionStringParams: readonly string[];
   }>;
 
+export type Sign = BaseItem &
+  Readonly<{
+    type: ItemType.Sign;
+    token: string;
+    nodeUid: bigint;
+    textItems: string[];
+  }>;
+
 export type Trigger = BaseItem &
   Readonly<{
     type: ItemType.Trigger;
@@ -426,6 +434,7 @@ export type Item =
   | CompanyItem
   | Cutscene
   | Trigger
+  | Sign
   | Model
   | Terrain
   | Building
@@ -542,6 +551,13 @@ export interface PrefabDescription {
   }[];
 }
 
+export interface SignDescription {
+  name: string;
+  modelDesc: string;
+  category: string;
+  editable: boolean;
+}
+
 export interface ModelDescription {
   center: { x: number; y: number };
   start: { x: number; y: number };
@@ -566,6 +582,7 @@ export interface MapData extends DefData {
   dividers: (Building | Curve)[];
   trajectories: TrajectoryItem[];
   triggers: Trigger[];
+  signs: Sign[];
   cutscenes: Cutscene[];
   cities: City[];
 }
@@ -576,6 +593,7 @@ export interface DefData {
   roadLooks: WithToken<RoadLook>[];
   prefabDescriptions: WithToken<WithPath<PrefabDescription>>[];
   modelDescriptions: WithToken<ModelDescription>[];
+  signDescriptions: WithToken<SignDescription>[];
   achievements: WithToken<Achievement>[];
   routes: WithToken<Route>[];
   mileageTargets: MileageTarget[];

@@ -18,6 +18,7 @@ import type {
   Node,
   Prefab,
   Road,
+  Sign,
   Terrain,
   TrajectoryItem,
   Trigger,
@@ -740,6 +741,8 @@ export function parseSector(buffer: Buffer) {
             return toCutscene(ri);
           case ItemType.Trigger:
             return toTrigger(ri);
+          case ItemType.Sign:
+            return toSignWithText(ri);
           case ItemType.Model:
             return toModel(ri);
           case ItemType.Terrain:
@@ -943,6 +946,24 @@ function toTrigger(
     dlcGuard: (rawItem.flags & 0x00_00_ff_00) >> 8,
     actions: [...actionsMap.entries()],
     nodeUids: rawItem.nodeUids,
+  };
+}
+
+function toSignWithText(
+  rawItem: SectorItem<ItemType.Sign>
+): WithoutSectorXY<Sign> {
+  const textItems = [];
+  for (const attr of rawItem.overrides.items.flatMap(item => item.attributes)) {
+    if (attr.version === 5) {
+      textItems.push(attr.value)
+    }
+  }
+
+  return {
+    ...toBaseItem(rawItem),
+    token: rawItem.token,
+    nodeUid: rawItem.nodeUid,
+    textItems
   };
 }
 

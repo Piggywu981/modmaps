@@ -840,3 +840,31 @@ export const CargoSiiSchema: JSONSchemaType<CargoSii> = {
     },
   ],
 };
+
+export interface SignSii {
+  signModel?: Record<
+    string,
+    {
+      modelDesc: string;
+      category?: string;
+      editable?: 'true' | 'false';
+    }
+  >;
+}
+
+export const SignSiiSchema: JSONSchemaType<SignSii> = object(
+  {
+    signModel: nullable(
+      patternRecord(
+        /^sign\.[0-9a-z_]{1,12}$/,
+        {
+          modelDesc: stringPattern(/^[^.]+\.pmd$/),
+          category: nullable(string),
+          editable: nullable(stringEnum('true', 'false')),
+        },
+        ['modelDesc'],
+      ),
+    ),
+  },
+  [],
+);
