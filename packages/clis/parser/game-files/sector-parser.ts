@@ -963,7 +963,7 @@ function toSignWithText(
     ...toBaseItem(rawItem),
     token: rawItem.token,
     nodeUid: rawItem.nodeUid,
-    textItems
+    textItems: textItems
   };
 }
 
