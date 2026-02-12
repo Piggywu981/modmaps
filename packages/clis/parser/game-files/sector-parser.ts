@@ -261,6 +261,7 @@ const SimpleItemStruct = {
     nodes: new r.Array(
       new r.Struct({
         nodeUid: uint64le,
+        nodeFlag: r.uint32le,
       }),
       r.uint32le,
     ),
@@ -315,7 +316,7 @@ const SimpleItemStruct = {
         r.uint32le,
         (parent: { nodes: unknown[] }) => parent.nodes.length,
       ),
-      () => versionFormat > 898,
+      () => versionFormat > 898 && versionFormat < 906,
     ),
     // debugStruct,
   },
@@ -396,16 +397,6 @@ const SimpleItemStruct = {
     nodeUid: uint64le,
     // debugStruct,
   },
-  [ItemType.Walker]: {
-    name: token64,
-    speed: r.floatle,
-    endDelay: r.floatle,
-    count: r.uint32le,
-    width: r.floatle,
-    angle: r.floatle,
-    lengths: new r.Array(r.floatle, r.uint32le),
-    nodeUids: new r.Array(uint64le, r.uint32le),
-  },
   [ItemType.Trigger]: {
     tags: new r.Array(token64, r.uint32le),
     nodeUids: new r.Array(uint64le, r.uint32le),
@@ -451,43 +442,64 @@ const SimpleItemStruct = {
       }),
       r.uint8,
     ),
-    overrideTemplate: paddedString,
-    overrides: new r.Struct({
-      items: new r.Array(
-        new r.Struct({
-          id: r.uint32le,
-          areaName: token64,
-          attributes: new r.Array(
-            new r.VersionedStruct(r.uint16le, {
-              header: {
-                index: r.uint32le,
-              },
-              1: {
-                value: r.int8,
-              },
-              2: {
-                value: r.int32le,
-              },
-              3: {
-                value: r.uint32le,
-              },
-              4: {
-                value: r.floatle,
-              },
-              5: {
-                value: uint64String,
-              },
-              6: {
-                value: uint64le,
-              },
-            }),
-            r.uint32le,
-          ),
-        }),
-        r.uint32le,
-      ),
-    }),
-    // debugStruct,
+    overrideTemplate: uint64String,
+    overrides: new r.Optional(
+      new r.Struct({
+        boards: new r.Array(
+          new r.Struct({
+            areaName: token64,
+            flags: r.uint8,
+            offsets: new r.Optional(
+              new r.Struct({
+                x: r.int8,
+                y: r.int8,
+              }),
+              (parent: { flags: number }) => (parent.flags & 0x01) !== 0,
+            ),
+            token: new r.Optional(
+              token64,
+              (parent: { flags: number }) => (parent.flags & 0x02) !== 0,
+            ),
+          }),
+          r.uint32le,
+        ),
+        items: new r.Array(
+          new r.Struct({
+            id: r.uint32le,
+            areaName: token64,
+            attributes: new r.Array(
+              new r.VersionedStruct(r.uint16le, {
+                header: {
+                  index: r.uint32le,
+                },
+                1: {
+                  value: r.int8,
+                },
+                2: {
+                  value: r.int32le,
+                },
+                3: {
+                  value: r.uint32le,
+                },
+                4: {
+                  value: r.floatle,
+                },
+                5: {
+                  value: uint64String,
+                },
+                6: {
+                  value: uint64le,
+                },
+              }),
+              r.uint32le,
+            ),
+          }),
+          r.uint32le,
+        ),
+        // debugStruct,
+      }),
+      (parent: { overrideTemplate: string }) => parent.overrideTemplate != '',
+    ),
   },
   [ItemType.BusStop]: {
     cityName: token64,
@@ -536,7 +548,8 @@ const SimpleItemStruct = {
       new r.Struct({
         node: r.uint32le,
         rule: token64,
-        params: new r.Array(r.floatle, r.uint32le),
+        padding: new r.Reserved(r.uint32le),
+        params: float3,
       }),
       r.uint32le,
     ),
@@ -953,9 +966,11 @@ function toSignWithText(
   rawItem: SectorItem<ItemType.Sign>
 ): WithoutSectorXY<Sign> {
   const textItems = [];
-  for (const attr of rawItem.overrides.items.flatMap(item => item.attributes)) {
-    if (attr.version === 5) {
-      textItems.push(attr.value)
+  if (rawItem.overrides && rawItem.overrides.items) {
+    for (const attr of rawItem.overrides.items.flatMap(item => item.attributes)) {
+      if (attr.version === 5) {
+        textItems.push(attr.value)
+      }
     }
   }
 

@@ -267,10 +267,10 @@ export function parseSectorFiles(
         sector.nodes.forEach(item => {
           nodes.set(item.uid, { ...item, sectorX, sectorY });
         });
-      } catch {
+      } catch(e) {
         bar.increment({ filename: f });
         error = true;
-        logger.error(`error parsing sector file`, `map/${map}/${f}`);
+        logger.error(`error parsing sector file`, `map/${map}/${f}`, e);
         continue;
       }
       bar.increment({ filename: f });
