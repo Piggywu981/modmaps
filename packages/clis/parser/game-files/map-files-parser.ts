@@ -1024,7 +1024,10 @@ export function postProcess(
       } else if (i.type === ItemType.Curve) {
         // HACK hardcoded checks for models that are known to be used as "center kerbs".
         // TODO parse def file, check model_desc has a path that starts with 'model/road_island/'
-        if (i.model === '0i03a' || i.model === '0i03b') {
+        if (
+          i.subcurves.every(sc => sc.model !== '0i03a') ||
+          i.subcurves.every(sc => sc.model !== '0i03b')
+        ) {
           sectorDividers.push(i);
         }
       }
